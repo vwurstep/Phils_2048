@@ -54,7 +54,6 @@ var Presets = (function () {
   var list = [
     preset('Classic 4x4', 4, 4),
     preset('5x5', 5, 5),
-    preset('4x5', 4, 5),
     preset('Cross', 5, 5, {
       mask: [
         '.###.',
@@ -62,6 +61,17 @@ var Presets = (function () {
         '#####',
         '#####',
         '.###.'
+      ]
+    }),
+    // 5x5 with the bottom-left to top-right diagonal removed: two triangles
+    // that only touch at the corners of the cut.
+    preset('Slash', 5, 5, {
+      mask: [
+        '####.',
+        '###.#',
+        '##.##',
+        '#.###',
+        '.####'
       ]
     })
   ];

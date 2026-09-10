@@ -461,13 +461,15 @@ test('diagonal config exposes 8 moves; orthogonal ones behave as classic', funct
 // --- presets ----------------------------------------------------------------
 
 test('presets have the expected shapes', function () {
-  ['Classic 4x4', '5x5', '4x5', 'Cross'].forEach(findPreset);
+  ['Classic 4x4', '5x5', 'Cross', 'Slash'].forEach(findPreset);
   assert.strictEqual(Object.keys(Presets.standardMoves()).length, 4);
   assert.strictEqual(Object.keys(Presets.eightMoves()).length, 8);
-  var p45 = findPreset('4x5');
-  assert.strictEqual(p45.width, 4);
-  assert.strictEqual(p45.height, 5);
-  assert.strictEqual(Engine.cells(p45).length, 20);
+  var slash = findPreset('Slash');
+  assert.strictEqual(Engine.cells(slash).length, 20);
+  // Every row and column of Slash is split into two runs by the hole (except the ends, one run).
+  assert.strictEqual(Engine.lines(slash, 'left').length, 8);
+  assert.strictEqual(Engine.lines(slash, 'up').length, 8);
+  Engine.cells(slash).forEach(function (c) { assert.notStrictEqual(c.x + c.y, 4); });
   assert.strictEqual(Engine.cells(findPreset('5x5')).length, 25);
   Presets.forEach(function (p) {
     assert.strictEqual(p.merge.rule, 'equal-double', p.name);
