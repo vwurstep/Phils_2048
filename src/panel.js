@@ -8,11 +8,12 @@ var Panel = (function () {
 
   var EDITOR_SIZE = 8;            // editor is EDITOR_SIZE x EDITOR_SIZE cells
   var CUSTOM_KEY = 'phils2048.custom';
+  var MOVES_KEY = 'phils2048.moves';   // 'normal' | 'diagonal'
+  var DIAG_SUFFIX = ' + diagonal';
   var MIN_CELLS = 2;
 
-  // Reuse preset objects so a custom config has exactly the same shape as a preset.
+  // Reuse a preset object so a custom config has exactly the same shape as a preset.
   var BASE = Presets[0];
-  var EIGHT = Presets.filter(function (p) { return Object.keys(p.moves).length === 8; })[0] || BASE;
 
   function storeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function storeSet(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} }
@@ -25,7 +26,7 @@ var Panel = (function () {
 
   // ---- state ---------------------------------------------------------------
   var cells = [];                 // cells[y][x] boolean
-  var moves = 4;                  // 4 or 8
+  var moveRule = 'normal';        // 'normal' | 'diagonal'; applies to presets and custom grids
   var paint = null;               // { id, value } while dragging over the editor
   var els = {};
 
@@ -38,13 +39,39 @@ var Panel = (function () {
     return c;
   }
 
+  function loadMoveRule() {
+    moveRule = storeGet(MOVES_KEY) === 'diagonal' ? 'diagonal' : 'normal';
+  }
+
+  function setMoveRule(rule) {
+    moveRule = rule === 'diagonal' ? 'diagonal' : 'normal';
+    storeSet(MOVES_KEY, moveRule);
+    renderMoveRule();
+  }
+
+  function renderMoveRule() {
+    Array.prototype.forEach.call(els.moves.children, function (b) {
+      var on = b.getAttribute('data-rule') === moveRule;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+
+  // Apply the selected move rule to a config: a copy with 8 moves and a
+  // " + diagonal" name suffix (so best scores stay separate), or the config as is.
+  function withMoveRule(cfg) {
+    if (moveRule !== 'diagonal') return cfg;
+    var c = clone(cfg);
+    c.name = cfg.name + DIAG_SUFFIX;
+    c.moves = Presets.eightMoves();
+    return c;
+  }
+
   function loadCustom() {
     cells = emptyCells();
-    moves = 4;
     var saved = null;
     try { saved = JSON.parse(storeGet(CUSTOM_KEY)); } catch (e) {}
     if (!saved) { fill4x4(); return; }
-    if (saved.moves === 8) moves = 8;
     (saved.cells || []).forEach(function (row, y) {
       if (y >= EDITOR_SIZE) return;
       String(row).split('').forEach(function (ch, x) {
@@ -55,7 +82,6 @@ var Panel = (function () {
 
   function saveCustom() {
     storeSet(CUSTOM_KEY, JSON.stringify({
-      moves: moves,
       cells: cells.map(function (row) {
         return row.map(function (on) { return on ? '#' : '.'; }).join('');
       })
@@ -92,16 +118,15 @@ var Panel = (function () {
       }
       mask.push(row);
     }
-    var base = moves === 8 ? EIGHT : BASE;
-    return {
+    return withMoveRule({
       name: 'Custom ' + width + 'x' + height,
       width: width,
       height: height,
       mask: holes ? mask : null,
-      moves: clone(base.moves),
+      moves: Presets.standardMoves(),
       spawn: clone(BASE.spawn),
       merge: clone(BASE.merge)
-    };
+    });
   }
 
   // ---- markup --------------------------------------------------------------
@@ -122,12 +147,15 @@ var Panel = (function () {
     var html = '<div class="panel-box" role="dialog" aria-label="New game">' +
       '<div class="panel-head"><h2>New game</h2>' +
       '<button type="button" class="panel-close" aria-label="Close">&times;</button></div>' +
+      '<div class="moves-row"><span class="moves-label" id="panel-moves-label">Moves:</span>' +
+        '<div class="seg moves-seg" id="panel-moves" role="group" aria-labelledby="panel-moves-label">' +
+          '<button type="button" class="pbtn" data-rule="normal">Normal</button>' +
+          '<button type="button" class="pbtn" data-rule="diagonal">Normal + diagonal</button>' +
+        '</div></div>' +
       '<div class="cards">';
     Presets.forEach(function (p, i) {
-      var dirs = Object.keys(p.moves).length;
       html += '<button type="button" class="card" data-preset="' + i + '">' + thumb(p) +
-              '<span class="card-name">' + esc(p.name) + '</span>' +
-              (dirs !== 4 ? '<span class="card-sub">' + dirs + ' directions</span>' : '') + '</button>';
+              '<span class="card-name">' + esc(p.name) + '</span></button>';
     });
     html += '<button type="button" class="card card-custom" id="panel-custom-toggle">' +
             '<span class="thumb custom-icon">&#9998;</span><span class="card-name">Custom</span></button>' +
@@ -138,10 +166,6 @@ var Panel = (function () {
         '<div class="editor-row">' +
           '<button type="button" class="pbtn" id="panel-clear">Clear</button>' +
           '<button type="button" class="pbtn" id="panel-fill">Fill 4x4</button>' +
-        '</div>' +
-        '<div class="editor-row seg" id="panel-moves">' +
-          '<button type="button" class="pbtn" data-moves="4">4 directions</button>' +
-          '<button type="button" class="pbtn" data-moves="8">8 directions</button>' +
         '</div>' +
         '<button type="button" class="pbtn start" id="panel-start">Start</button>' +
       '</div>' +
@@ -170,7 +194,7 @@ var Panel = (function () {
 
     root.addEventListener('click', function (e) {
       var card = e.target.closest('.card[data-preset]');
-      if (card) { window.startGame(Presets[card.getAttribute('data-preset')]); close(); }
+      if (card) { window.startGame(withMoveRule(Presets[card.getAttribute('data-preset')])); close(); }
     });
     els.toggle.addEventListener('click', function () {
       els.editor.hidden = !els.editor.hidden;
@@ -181,10 +205,8 @@ var Panel = (function () {
     root.querySelector('#panel-clear').addEventListener('click', function () { cells = emptyCells(); renderEditor(); });
     root.querySelector('#panel-fill').addEventListener('click', function () { fill4x4(); renderEditor(); });
     els.moves.addEventListener('click', function (e) {
-      var b = e.target.closest('button[data-moves]');
-      if (!b) return;
-      moves = parseInt(b.getAttribute('data-moves'), 10);
-      renderEditor();
+      var b = e.target.closest('button[data-rule]');
+      if (b) setMoveRule(b.getAttribute('data-rule'));
     });
     els.start.addEventListener('click', function () {
       var cfg = buildCustomConfig();
@@ -229,9 +251,6 @@ var Panel = (function () {
     for (var y = 0; y < EDITOR_SIZE; y++) for (var x = 0; x < EDITOR_SIZE; x++) {
       kids[y * EDITOR_SIZE + x].classList.toggle('on', cells[y][x]);
     }
-    Array.prototype.forEach.call(els.moves.children, function (b) {
-      b.classList.toggle('active', +b.getAttribute('data-moves') === moves);
-    });
     var n = countSelected();
     els.start.disabled = n < MIN_CELLS;
     els.start.textContent = n < MIN_CELLS ? 'Start (select at least ' + MIN_CELLS + ' cells)' : 'Start';
@@ -242,6 +261,8 @@ var Panel = (function () {
 
   function open() {
     if (!els.root) build();
+    loadMoveRule();
+    renderMoveRule();
     loadCustom();
     renderEditor();
     // Open straight into the editor when a custom game is running.

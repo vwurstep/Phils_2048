@@ -157,10 +157,12 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
 .controls button:active, .overlay button:active, .movepad button:active { filter: brightness(0.9); }
 
 /* Board: width limited by container width and by the viewport height (desktop) */
+.app > * { max-width: 100%; min-width: 0; }
 .board-wrap {
   --cols: 4;
   --rows: 4;
   position: relative;
+  overflow: hidden;
   width: 100%;
   width: min(100%, max(200px, calc((100vh - 19rem) * var(--cols) / var(--rows))));
   width: min(100%, max(200px, calc((100dvh - 19rem) * var(--cols) / var(--rows))));
@@ -178,7 +180,7 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
   touch-action: none;
   cursor: grab;
 }
-.cell, .hole { aspect-ratio: 1 / 1; border-radius: 3px; }
+.cell, .hole { aspect-ratio: 1 / 1; border-radius: 3px; min-width: 0; min-height: 0; }
 .cell { background: var(--empty); position: relative; }
 .hole { background: transparent; }
 
@@ -192,8 +194,9 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
   top: var(--gap);
   width: var(--cell);
   height: var(--cell);
-  transform: translate(calc(var(--x) * (var(--cell) + var(--gap))),
-                       calc(var(--y) * (var(--cell) + var(--gap))));
+  transform: translate3d(calc(var(--x) * (var(--cell) + var(--gap))),
+                         calc(var(--y) * (var(--cell) + var(--gap))), 0);
+  will-change: transform;
 }
 .tiles.sliding .tile { transition: transform 80ms ease-out; }
 .face {
@@ -350,7 +353,12 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
 .card:active { filter: brightness(0.95); }
 .card.active { border-color: var(--btn); }
 .card-name { font-size: 0.9rem; font-weight: 700; text-align: center; }
-.card-sub { font-size: 0.7rem; margin-top: -6px; opacity: 0.8; }
+
+/* Move-rule toggle at the top of the panel (applies to presets and custom grids) */
+.moves-row { display: flex; align-items: center; gap: 10px; }
+.moves-label { font-size: 0.9rem; font-weight: 700; white-space: nowrap; }
+.moves-seg { display: flex; gap: 6px; flex: 1; }
+.moves-seg .pbtn { flex: 1; font-size: 0.85rem; padding: 8px 6px; white-space: nowrap; }
 .thumb {
   display: grid;
   gap: 2px;

@@ -37,7 +37,10 @@ function test(name, fn) {
 
 var classic = findPreset('Classic 4x4');
 var cross = findPreset('Cross');
-var diag = findPreset('Classic + diagonals');
+// Diagonal rules are a move-set applied to any layout (see Presets.eightMoves).
+var diag = JSON.parse(JSON.stringify(classic));
+diag.name = 'Classic 4x4 + diagonal';
+diag.moves = Presets.eightMoves();
 
 // --- slideLine ------------------------------------------------------------
 
@@ -420,7 +423,7 @@ test('won flag set when 2048 appears and persists', function () {
 
 // --- diagonals ------------------------------------------------------------
 
-test('diagonal move on Classic + diagonals slides a tile to the corner', function () {
+test('diagonal move on Classic 4x4 + diagonal slides a tile to the corner', function () {
   var s = Engine.fromGrid(diag, [
     [0, 0, 0, 0],
     [0, 2, 0, 0],
@@ -447,7 +450,7 @@ test('diagonal move on Classic + diagonals slides a tile to the corner', functio
   assert(!(u.last.spawned[0].x === 0 && u.last.spawned[0].y === 0));
 });
 
-test('diagonal preset exposes 8 moves; orthogonal ones behave as classic', function () {
+test('diagonal config exposes 8 moves; orthogonal ones behave as classic', function () {
   assert.deepStrictEqual(Object.keys(diag.moves).sort(),
     ['down', 'downleft', 'downright', 'left', 'right', 'up', 'upleft', 'upright']);
   var s = Engine.fromGrid(diag, [[0, 0, 0, 2], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]);
@@ -458,7 +461,9 @@ test('diagonal preset exposes 8 moves; orthogonal ones behave as classic', funct
 // --- presets ----------------------------------------------------------------
 
 test('presets have the expected shapes', function () {
-  ['Classic 4x4', '5x5', '4x5', 'Cross', 'Classic + diagonals'].forEach(findPreset);
+  ['Classic 4x4', '5x5', '4x5', 'Cross'].forEach(findPreset);
+  assert.strictEqual(Object.keys(Presets.standardMoves()).length, 4);
+  assert.strictEqual(Object.keys(Presets.eightMoves()).length, 8);
   var p45 = findPreset('4x5');
   assert.strictEqual(p45.width, 4);
   assert.strictEqual(p45.height, 5);

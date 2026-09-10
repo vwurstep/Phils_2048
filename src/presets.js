@@ -1,5 +1,7 @@
 /*
- * Named configurations for Phil's 2048. Plain script: defines global `Presets`.
+ * Named configurations for Phil's 2048. Plain script: defines global `Presets`,
+ * an array of configs that also carries the move-set helpers
+ * `Presets.standardMoves()` (4 orthogonal) and `Presets.eightMoves()` (+ diagonals).
  * Does not depend on engine.js.
  */
 var Presets = (function () {
@@ -49,7 +51,7 @@ var Presets = (function () {
     return p;
   }
 
-  return [
+  var list = [
     preset('Classic 4x4', 4, 4),
     preset('5x5', 5, 5),
     preset('4x5', 4, 5),
@@ -61,9 +63,11 @@ var Presets = (function () {
         '#####',
         '.###.'
       ]
-    }),
-    preset('Classic + diagonals', 4, 4, { moves: eightMoves() })
+    })
   ];
+  list.standardMoves = standardMoves;
+  list.eightMoves = eightMoves;
+  return list;
 })();
 
 if (typeof module !== 'undefined') module.exports = Presets;

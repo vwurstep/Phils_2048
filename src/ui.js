@@ -295,6 +295,12 @@
   window.startGame = startGame;
   window.currentConfig = function () { return config; };
 
+  // Re-measure after the first paint and after fonts/window settle: some browsers
+  // (seen in Safari) report a different board width a moment after the script ran.
+  function relayout() { layout(); renderFinal(); }
+  window.requestAnimationFrame(function () { window.requestAnimationFrame(relayout); });
+  window.addEventListener('load', relayout);
+  window.addEventListener('pageshow', relayout);
   if (window.ResizeObserver) new ResizeObserver(layout).observe(els.board);
   else window.addEventListener('resize', layout);
 

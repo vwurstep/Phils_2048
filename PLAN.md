@@ -36,6 +36,15 @@ Design decisions taken (change if you disagree):
   the move direction. It cannot jump across a gap in the mask.
 - Animations: minimal at first (tiles just re-render). Sliding animation is a later nicety.
 
+## Known issues
+
+- Phil saw the board cut off on the left with misplaced tiles when opening index.html on his
+  MacBook (double-click, probably Safari); fixed by choosing a new layout. Not reproducible in
+  headless Chrome or Playwright WebKit. A re-layout after first paint plus overflow guards
+  were added as a best guess (2026-09-10); if it persists, leave it.
+- Slide animation is slightly bumpy on iPhone Safari (fine on Mac). Tiles now use
+  translate3d + will-change; revisit when packaging as an app.
+
 ## Phase 2: app
 
 Options, in order of preference:
@@ -49,8 +58,9 @@ Done so far:
 - Undo (last 10 moves, Backspace key). On-screen move buttons exist in the code but are hidden.
 - Fast slide animation (80 ms) driven by `state.last.tiles` from the engine.
 - Four colour themes (classic, dark, ocean, mono), cycled by the header button, all colours are CSS variables.
-- "New game" panel: preset cards with shape thumbnails, plus a custom 8x8 paint editor
-  (`EDITOR_SIZE` in src/panel.js) that crops to the bounding box, with a 4/8-direction choice.
+- "New game" panel: a "Normal / Normal + diagonal" move toggle that applies to any layout,
+  preset cards with shape thumbnails, plus a custom 8x8 paint editor
+  (`EDITOR_SIZE` in src/panel.js) that crops to the bounding box.
 - The running game (board, score, undo history) is saved in localStorage and restored on reload.
 
 Ideas parked for later: seed sharing, spawn rules that depend on board state,
