@@ -19,7 +19,7 @@
   function $(id) { return document.getElementById(id); }
   var els = { board: $('board'), score: $('score'), best: $('best'), configname: $('configname'),
               newgame: $('newgame'), undo: $('undo'), overlay: $('overlay'), retry: $('retry'),
-              message: $('message'), movepad: $('movepad'), config: $('config'), theme: $('theme') };
+              message: $('message'), movepad: $('movepad'), theme: $('theme') };
   // Tile layer: absolutely positioned over the static cells, survives board rebuilds.
   els.tiles = document.createElement('div');
   els.tiles.className = 'tiles';
@@ -73,9 +73,6 @@
     var wrap = els.board.parentElement;
     wrap.style.setProperty('--cols', config.width);
     wrap.style.setProperty('--rows', config.height);
-    els.config.textContent = JSON.stringify(config, function (k, v) {
-      return typeof v === 'function' ? v.toString() : v;
-    }, 2);
     buildMovepad();
     buildBoard();
     layout();

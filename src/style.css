@@ -283,20 +283,6 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
 .movepad.list button { font-size: 0.85rem; }
 
 /* Config */
-.config { width: 100%; font-size: 0.85rem; }
-.config summary { cursor: pointer; }
-.config pre {
-  margin: 6px 0 0;
-  padding: 8px;
-  background: var(--surface);
-  border-radius: 4px;
-  font-size: 0.75rem;
-  max-height: 40vh;
-  overflow: auto;
-  -webkit-user-select: text;
-  user-select: text;
-}
-
 /* New game panel (src/panel.js) */
 .panel {
   position: fixed;

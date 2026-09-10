@@ -7,6 +7,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#faf8ef">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
 <title>Phil's 2048</title>
 <link rel="stylesheet" href="src/style.css">
 </head>
@@ -44,15 +47,17 @@
 
   <div id="movepad" class="movepad" hidden></div>
 
-  <details class="config">
-    <summary>Config</summary>
-    <pre id="config"></pre>
-  </details>
 </div>
 
 <script src="src/engine.js"></script>
 <script src="src/presets.js"></script>
 <script src="src/ui.js"></script>
 <script src="src/panel.js"></script>
+<script>
+// Offline support / home-screen install (only over http(s); ignored when opened as a file).
+if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
+  navigator.serviceWorker.register('sw.js').catch(function () {});
+}
+</script>
 </body>
 </html>

@@ -47,9 +47,12 @@ Design decisions taken (change if you disagree):
 
 ## Phase 2: app
 
-Options, in order of preference:
-1. PWA: add a manifest + service worker, "Add to Home Screen" on iOS/Android. Same code.
-2. Capacitor: wraps the same web code into a real iOS/Android app for the stores.
+1. PWA (done 2026-09-10): manifest.webmanifest, sw.js (network first, cache fallback, bump
+   `CACHE` on release), icons/. Install on iPhone: open the Pages URL in Safari, Share,
+   "Add to Home Screen". Runs full screen and offline.
+2. Capacitor (next, when an App Store / TestFlight build is wanted): wraps the same web code
+   into an Xcode project. Needs Xcode and an Apple ID on the Mac; the Apple Developer
+   Program (paid) only for TestFlight/App Store distribution.
 3. Native rewrite: only if performance or platform features demand it (unlikely).
 
 ## Phase 3: more knobs

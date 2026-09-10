@@ -205,6 +205,12 @@
   },
   "active": "f31f4eddab77cdc2",
   "lastOpenFiles": [
+    "sw.js",
+    "manifest.webmanifest",
+    "icons/icon-180.png",
+    "icons/icon-192.png",
+    "icons/icon-512.png",
+    "icons",
     "src/panel.js",
     "src/ui.js",
     "src/style.css",
@@ -213,7 +219,6 @@
     "test",
     "src/presets.js",
     "src/engine.js",
-    "src",
     "CLAUDE.md",
     "PLAN.md"
   ]

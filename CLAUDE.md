@@ -36,6 +36,8 @@ experiment with the rules: grid geometry, movement, tile spawning statistics, an
 - Phil wants to be economical with tokens overall.
 - Keep PLAN.md up to date when the plan changes.
 - Run the engine tests (`node test/engine.test.js`) after touching engine code.
+- Visual checks: headless Chrome or Playwright WebKit screenshots from Bash (see memory);
+  the claude-in-chrome skill does not work here.
 
 ## Layout
 
@@ -43,7 +45,9 @@ experiment with the rules: grid geometry, movement, tile spawning statistics, an
 index.html          playable page (prototype)
 src/engine.js       pure game logic
 src/ui.js           rendering + input (keyboard, touch swipe)
-src/presets.js      named configs (classic 4x4, 5x5, cross, ...)
+src/presets.js      named configs (classic 4x4, 5x5, cross, ...) + move-set helpers
+src/panel.js        "New game" panel: move toggle, preset cards, custom grid editor
 test/engine.test.js node-runnable tests, no framework
+manifest.webmanifest, sw.js, icons/   PWA bits; bump CACHE in sw.js when files change
 PLAN.md             the plan and open decisions
 ```
