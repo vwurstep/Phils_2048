@@ -45,7 +45,9 @@ Options, in order of preference:
 
 ## Phase 3: more knobs
 
-Ideas parked for later: undo, seed sharing, spawn rules that depend on board state,
+Done: undo (last 10 moves, Backspace key). On-screen move buttons exist in the code but are hidden.
+
+Ideas parked for later: seed sharing, spawn rules that depend on board state,
 merge rules other than doubling, timed mode, statistics of games played.
 
 ## Decisions from Phil (2026-09-10)

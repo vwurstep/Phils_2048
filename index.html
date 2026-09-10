@@ -22,6 +22,7 @@
     </div>
     <div class="controls">
       <select id="preset" aria-label="Preset"></select>
+      <button id="undo" type="button" title="Undo last move (Backspace)" disabled>Undo</button>
       <button id="newgame" type="button">New game</button>
     </div>
   </header>
@@ -35,7 +36,7 @@
     </div>
   </div>
 
-  <div id="movepad" class="movepad"></div>
+  <div id="movepad" class="movepad" hidden></div>
 
   <details class="config">
     <summary>Config</summary>

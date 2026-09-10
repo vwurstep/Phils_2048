@@ -67,6 +67,7 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
   cursor: pointer;
 }
 .controls select { flex: 1; appearance: none; -webkit-appearance: none; }
+.controls button:disabled { opacity: 0.45; cursor: default; }
 .controls button:active, .overlay button:active, .movepad button:active { filter: brightness(0.9); }
 
 /* Board: width limited by container width and by the viewport height (desktop) */

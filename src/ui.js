@@ -16,10 +16,12 @@
 
   function $(id) { return document.getElementById(id); }
   var els = { board: $('board'), score: $('score'), best: $('best'), preset: $('preset'),
-              newgame: $('newgame'), overlay: $('overlay'), retry: $('retry'),
+              newgame: $('newgame'), undo: $('undo'), overlay: $('overlay'), retry: $('retry'),
               message: $('message'), movepad: $('movepad'), config: $('config') };
 
   var config = null, state = null, wonShown = false, msgTimer = null;
+  var history = [];           // previous states, oldest first, at most MAX_UNDO
+  var MAX_UNDO = 10;
 
   // ---- storage --------------------------------------------------------------
   function storeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -37,6 +39,7 @@
   function startGame(preset) {
     config = preset;
     state = Engine.newGame(config);
+    history = [];
     wonShown = false;
     hideMessage();
     var wrap = els.board.parentElement;
@@ -54,7 +57,15 @@
     if (!state || state.over || !config.moves[dir]) return;
     var next = Engine.move(state, dir);
     if (!next || !next.last || !next.last.moved) return;
+    history.push(state);
+    if (history.length > MAX_UNDO) history.shift();
     state = next;
+    render();
+  }
+
+  function undo() {
+    if (!history.length) return;
+    state = history.pop();
     render();
   }
 
@@ -92,6 +103,7 @@
     els.score.textContent = state.score;
     els.best.textContent = best();
     els.overlay.hidden = !state.over;
+    els.undo.disabled = history.length === 0;
 
     if (state.won && !wonShown) {
       wonShown = true;
@@ -133,6 +145,7 @@
   document.addEventListener('keydown', function (e) {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.target && e.target.tagName === 'SELECT') return;
+    if (e.key === 'Backspace') { e.preventDefault(); undo(); return; }
     var dir = KEYS[e.key] || KEYS[String(e.key).toLowerCase()];
     if (dir && config && config.moves[dir]) { e.preventDefault(); dispatch(dir); }
   });
@@ -174,6 +187,7 @@
     var b = e.target.closest('button');
     if (b) dispatch(b.getAttribute('data-dir'));
   });
+  els.undo.addEventListener('click', undo);
   els.newgame.addEventListener('click', function () { startGame(config); });
   els.retry.addEventListener('click', function () { startGame(config); });
 
