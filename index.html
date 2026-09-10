@@ -17,14 +17,17 @@
 <div class="app">
   <header>
     <div class="title-row">
-      <h1>Phil's 2048</h1>
+      <div class="brand">
+        <img class="logo" src="icons/icon-192.png" width="44" height="44" alt="Phil's 2048 app icon: a P made of tiles">
+        <h1>Phil's 2048</h1>
+      </div>
       <div class="scores">
         <div class="scorebox"><span class="label">Score</span><span id="score">0</span></div>
         <div class="scorebox"><span class="label">Best</span><span id="best">0</span></div>
       </div>
     </div>
+    <div id="configname" class="configname"></div>
     <div class="controls">
-      <span id="configname" class="configname"></span>
       <select id="theme" title="Colour theme" aria-label="Colour theme">
         <option value="classic">Classic</option>
         <option value="dark">Dark</option>
@@ -32,7 +35,7 @@
         <option value="mono">Mono</option>
       </select>
       <button id="undo" type="button" title="Undo last move (Backspace)" disabled>Undo</button>
-      <button id="newgame" type="button">New game</button>
+      <button id="newgame" type="button" class="primary">New game</button>
     </div>
   </header>
 

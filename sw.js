@@ -1,6 +1,6 @@
 /* Service worker: caches the app shell so the game works offline and launches instantly.
    Bump CACHE whenever files change; old caches are deleted on activate. */
-var CACHE = 'phils2048-v3';
+var CACHE = 'phils2048-v4';
 var FILES = ['./', './index.html', './src/style.css', './src/engine.js', './src/presets.js',
              './src/ui.js', './src/panel.js', './manifest.webmanifest',
              './icons/icon-192.png', './icons/icon-512.png', './icons/icon-180.png'];
