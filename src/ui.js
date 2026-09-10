@@ -9,7 +9,7 @@
                   downleft: [1, 3], down: [2, 3], downright: [3, 3] };
   var KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
                w: 'up', s: 'down', a: 'left', d: 'right',
-               q: 'upleft', e: 'upright', z: 'downleft', c: 'downright' };
+               q: 'upleft', e: 'upright', z: 'downleft', y: 'downleft', c: 'downright' };  // y: Swiss keyboards swap Y and Z
   var PALETTE_RANKS = 10;   // .t1 .. .t10 (2 .. 1024); above that: dark
   var THEMES = ['classic', 'dark', 'ocean', 'mono'];
   var SLIDE_FALLBACK_MS = 100;  // slide is 80 ms in CSS; finish anyway if transitionend never fires
