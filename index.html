@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#faf8ef">
+<title>Phil's 2048</title>
+<link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="title-row">
+      <h1>Phil's 2048</h1>
+      <div class="scores">
+        <div class="scorebox"><span class="label">Score</span><span id="score">0</span></div>
+        <div class="scorebox"><span class="label">Best</span><span id="best">0</span></div>
+      </div>
+    </div>
+    <div class="controls">
+      <select id="preset" aria-label="Preset"></select>
+      <button id="newgame" type="button">New game</button>
+    </div>
+  </header>
+
+  <div class="board-wrap">
+    <div id="board" class="board"></div>
+    <div id="message" class="message" hidden></div>
+    <div id="overlay" class="overlay" hidden>
+      <p>Game over</p>
+      <button id="retry" type="button">Try again</button>
+    </div>
+  </div>
+
+  <div id="movepad" class="movepad"></div>
+
+  <details class="config">
+    <summary>Config</summary>
+    <pre id="config"></pre>
+  </details>
+</div>
+
+<script src="src/engine.js"></script>
+<script src="src/presets.js"></script>
+<script src="src/ui.js"></script>
+</body>
+</html>

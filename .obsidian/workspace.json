@@ -205,6 +205,14 @@
   },
   "active": "f31f4eddab77cdc2",
   "lastOpenFiles": [
+    "src/ui.js",
+    "src/style.css",
+    "index.html",
+    "test/engine.test.js",
+    "test",
+    "src/presets.js",
+    "src/engine.js",
+    "src",
     "CLAUDE.md",
     "PLAN.md"
   ]
