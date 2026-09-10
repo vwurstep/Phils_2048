@@ -1,10 +1,80 @@
-:root {
+/* Themes: every colour is a custom property; body[data-theme] swaps the whole set.
+   --tile-fg is the text colour of ranks 1-2, --tile-fg-light of ranks 3+ and dark tiles. */
+:root, body[data-theme="classic"] {
   --bg: #faf8ef;
   --fg: #776e65;
   --fg-light: #f9f6f2;
   --board: #bbada0;
   --empty: #cdc1b4;
   --btn: #8f7a66;
+  --btn-fg: #fff;
+  --score-fg: #fff;
+  --score-label: #eee4da;
+  --surface: #eee4da;
+  --overlay: rgba(238, 228, 218, 0.75);
+  --toast: rgba(60, 58, 50, 0.85);
+  --tile-fg: #776e65;
+  --tile-fg-light: #f9f6f2;
+  --t1: #eee4da; --t2: #ede0c8; --t3: #f2b179; --t4: #f59563; --t5: #f67c5f;
+  --t6: #f65e3b; --t7: #edcf72; --t8: #edcc61; --t9: #edc850; --t10: #edc53f;
+  --tdark: #3c3a32;
+}
+body[data-theme="dark"] {
+  --bg: #1d1b19;
+  --fg: #e6ddd1;
+  --fg-light: #fbf6ee;
+  --board: #3b3733;
+  --empty: #4d4841;
+  --btn: #7a6a5a;
+  --btn-fg: #fbf6ee;
+  --score-fg: #fbf6ee;
+  --score-label: #bfb3a4;
+  --surface: #2c2925;
+  --overlay: rgba(29, 27, 25, 0.78);
+  --toast: rgba(230, 221, 209, 0.9);
+  --tile-fg: #2c2925;
+  --tile-fg-light: #fbf6ee;
+  --t1: #d8cdbd; --t2: #cbbba2; --t3: #c58f5c; --t4: #c27a47; --t5: #bd6840;
+  --t6: #b85331; --t7: #c2a34a; --t8: #bd9b3b; --t9: #b7922d; --t10: #b08a1f;
+  --tdark: #14120f;
+}
+body[data-theme="ocean"] {
+  --bg: #edf5f8;
+  --fg: #1f4a5c;
+  --fg-light: #f4fbfd;
+  --board: #5e8ea6;
+  --empty: #8db0c2;
+  --btn: #2a6d8a;
+  --btn-fg: #fff;
+  --score-fg: #fff;
+  --score-label: #d6e8ef;
+  --surface: #d9eaf1;
+  --overlay: rgba(237, 245, 248, 0.78);
+  --toast: rgba(31, 74, 92, 0.88);
+  --tile-fg: #1f4a5c;
+  --tile-fg-light: #f4fbfd;
+  --t1: #dcedf3; --t2: #c2e1ec; --t3: #2f9fbb; --t4: #218cab; --t5: #1a7898;
+  --t6: #166484; --t7: #2a9a8c; --t8: #228578; --t9: #1b6e66; --t10: #145955;
+  --tdark: #0d2a35;
+}
+body[data-theme="mono"] {
+  --bg: #f4f4f4;
+  --fg: #2b2b2b;
+  --fg-light: #fafafa;
+  --board: #9a9a9a;
+  --empty: #b8b8b8;
+  --btn: #d9662a;
+  --btn-fg: #fff;
+  --score-fg: #fff;
+  --score-label: #e6e6e6;
+  --surface: #e4e4e4;
+  --overlay: rgba(244, 244, 244, 0.78);
+  --toast: rgba(43, 43, 43, 0.88);
+  --tile-fg: #2b2b2b;
+  --tile-fg-light: #fafafa;
+  --t1: #ececec; --t2: #d6d6d6; --t3: #7d7d7d; --t4: #686868; --t5: #545454;
+  --t6: #404040; --t7: #eb9a5f; --t8: #e48446; --t9: #d9662a; --t10: #c1521a;
+  --tdark: #1a1a1a;
 }
 
 * { box-sizing: border-box; }
@@ -43,7 +113,7 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
 .scores { display: flex; gap: 6px; }
 .scorebox {
   background: var(--board);
-  color: #fff;
+  color: var(--score-fg);
   border-radius: 4px;
   padding: 4px 10px;
   min-width: 60px;
@@ -52,7 +122,7 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
   flex-direction: column;
   line-height: 1.15;
 }
-.scorebox .label { font-size: 0.65rem; text-transform: uppercase; color: #eee4da; font-weight: 700; }
+.scorebox .label { font-size: 0.65rem; text-transform: uppercase; color: var(--score-label); font-weight: 700; }
 .scorebox span:last-child { font-size: 1.1rem; font-weight: 700; }
 
 .controls { display: flex; gap: 8px; align-items: center; }
@@ -63,10 +133,11 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
   border: 0;
   border-radius: 4px;
   padding: 7px 12px;
-  color: #fff;
+  color: var(--btn-fg);
   background: var(--btn);
   cursor: pointer;
 }
+.controls button.icon { padding: 7px 9px; font-size: 1.05rem; line-height: 1.15; }
 .controls button:disabled { opacity: 0.45; cursor: default; }
 .controls button:active, .overlay button:active, .movepad button:active { filter: brightness(0.9); }
 
@@ -82,6 +153,7 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
 .board {
   --gap: 8px;
   --cell: 80px;
+  position: relative;
   display: grid;
   grid-template-columns: repeat(var(--cols), 1fr);
   gap: var(--gap);
@@ -95,7 +167,21 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
 .cell { background: var(--empty); position: relative; }
 .hole { background: transparent; }
 
+/* Tile layer over the static cells. A .tile is placed by --x/--y (cell coordinates)
+   through a translate computed from --cell/--gap, so it follows layout() on resize.
+   The coloured .face inside carries the pop/spawn scale, independent of the translate. */
+.tiles { position: absolute; inset: 0; pointer-events: none; }
 .tile {
+  position: absolute;
+  left: var(--gap);
+  top: var(--gap);
+  width: var(--cell);
+  height: var(--cell);
+  transform: translate(calc(var(--x) * (var(--cell) + var(--gap))),
+                       calc(var(--y) * (var(--cell) + var(--gap))));
+}
+.tiles.sliding .tile { transition: transform 80ms ease-out; }
+.face {
   position: absolute;
   inset: 0;
   display: flex;
@@ -104,26 +190,26 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
   border-radius: 3px;
   font-weight: 700;
   font-size: calc(var(--cell) * 0.5);
-  color: var(--fg);
-  background: #eee4da;
+  color: var(--tile-fg);
+  background: var(--t1);
   line-height: 1;
 }
-.tile[data-len="3"] { font-size: calc(var(--cell) * 0.42); }
-.tile[data-len="4"] { font-size: calc(var(--cell) * 0.34); }
-.tile[data-len="5"] { font-size: calc(var(--cell) * 0.27); }
+.face[data-len="3"] { font-size: calc(var(--cell) * 0.42); }
+.face[data-len="4"] { font-size: calc(var(--cell) * 0.34); }
+.face[data-len="5"] { font-size: calc(var(--cell) * 0.27); }
 
 /* Colours by rank (round(log2 value)): 1=2, 2=4, ... 10=1024; higher/unknown = dark */
-.t1  { background: #eee4da; }
-.t2  { background: #ede0c8; }
-.t3  { background: #f2b179; color: var(--fg-light); }
-.t4  { background: #f59563; color: var(--fg-light); }
-.t5  { background: #f67c5f; color: var(--fg-light); }
-.t6  { background: #f65e3b; color: var(--fg-light); }
-.t7  { background: #edcf72; color: var(--fg-light); }
-.t8  { background: #edcc61; color: var(--fg-light); }
-.t9  { background: #edc850; color: var(--fg-light); }
-.t10 { background: #edc53f; color: var(--fg-light); }
-.tdark { background: #3c3a32; color: var(--fg-light); }
+.t1  { background: var(--t1); }
+.t2  { background: var(--t2); }
+.t3  { background: var(--t3); color: var(--tile-fg-light); }
+.t4  { background: var(--t4); color: var(--tile-fg-light); }
+.t5  { background: var(--t5); color: var(--tile-fg-light); }
+.t6  { background: var(--t6); color: var(--tile-fg-light); }
+.t7  { background: var(--t7); color: var(--tile-fg-light); }
+.t8  { background: var(--t8); color: var(--tile-fg-light); }
+.t9  { background: var(--t9); color: var(--tile-fg-light); }
+.t10 { background: var(--t10); color: var(--tile-fg-light); }
+.tdark { background: var(--tdark); color: var(--tile-fg-light); }
 
 .spawned { animation: spawn 0.18s ease-out; }
 .merged { animation: pop 0.2s ease-out; }
@@ -135,7 +221,7 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
   position: absolute;
   inset: 0;
   border-radius: 6px;
-  background: rgba(238, 228, 218, 0.75);
+  background: var(--overlay);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -149,8 +235,8 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
   top: 8px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(60, 58, 50, 0.85);
-  color: #fff;
+  background: var(--toast);
+  color: var(--bg);
   padding: 6px 12px;
   border-radius: 4px;
   font-size: 0.9rem;
@@ -170,7 +256,7 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
   border: 0;
   border-radius: 4px;
   background: var(--board);
-  color: #fff;
+  color: var(--score-fg);
   cursor: pointer;
   padding: 0 8px;
   min-height: 40px;
@@ -184,7 +270,7 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
 .config pre {
   margin: 6px 0 0;
   padding: 8px;
-  background: #eee4da;
+  background: var(--surface);
   border-radius: 4px;
   font-size: 0.75rem;
   max-height: 40vh;
@@ -236,7 +322,7 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
   font: inherit;
   border: 2px solid transparent;
   border-radius: 6px;
-  background: #eee4da;
+  background: var(--surface);
   color: var(--fg);
   cursor: pointer;
   padding: 10px 8px 8px;
@@ -267,7 +353,7 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
   align-items: center;
   justify-content: center;
   font-size: 1.8rem;
-  color: #fff;
+  color: var(--score-fg);
   font-style: normal;
 }
 
@@ -288,7 +374,7 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
   border-radius: 3px;
   background: rgba(238, 228, 218, 0.35);
 }
-.ecell.on { background: #f2b179; }
+.ecell.on { background: var(--t3); }
 .editor-row { display: flex; gap: 8px; width: 100%; }
 .editor-row .pbtn { flex: 1; }
 .pbtn {
@@ -297,7 +383,7 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
   border: 0;
   border-radius: 4px;
   padding: 9px 12px;
-  color: #fff;
+  color: var(--btn-fg);
   background: var(--btn);
   cursor: pointer;
 }

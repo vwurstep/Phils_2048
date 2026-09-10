@@ -11,13 +11,18 @@
                w: 'up', s: 'down', a: 'left', d: 'right',
                q: 'upleft', e: 'upright', z: 'downleft', c: 'downright' };
   var PALETTE_RANKS = 10;   // .t1 .. .t10 (2 .. 1024); above that: dark
+  var THEMES = ['classic', 'dark', 'ocean', 'mono'];
+  var SLIDE_FALLBACK_MS = 100;  // slide is 80 ms in CSS; finish anyway if transitionend never fires
   var MIN_SWIPE = 20;       // px
   var MIN_COS = 0.5;        // ignore swipes not close to any allowed direction
 
   function $(id) { return document.getElementById(id); }
   var els = { board: $('board'), score: $('score'), best: $('best'), configname: $('configname'),
               newgame: $('newgame'), undo: $('undo'), overlay: $('overlay'), retry: $('retry'),
-              message: $('message'), movepad: $('movepad'), config: $('config') };
+              message: $('message'), movepad: $('movepad'), config: $('config'), theme: $('theme') };
+  // Tile layer: absolutely positioned over the static cells, survives board rebuilds.
+  els.tiles = document.createElement('div');
+  els.tiles.className = 'tiles';
 
   var config = null, state = null, wonShown = false, msgTimer = null;
   var history = [];           // previous states, oldest first, at most MAX_UNDO
@@ -52,8 +57,9 @@
       return typeof v === 'function' ? v.toString() : v;
     }, 2);
     buildMovepad();
+    buildBoard();
     layout();
-    render();
+    render(false);
   }
 
   function dispatch(dir) {
@@ -63,13 +69,13 @@
     history.push(state);
     if (history.length > MAX_UNDO) history.shift();
     state = next;
-    render();
+    render(true);
   }
 
   function undo() {
     if (!history.length) return;
     state = history.pop();
-    render();
+    render(false);
   }
 
   // ---- rendering ------------------------------------------------------------
@@ -85,22 +91,72 @@
     return rank > PALETTE_RANKS ? 'tdark' : 't' + rank;
   }
 
-  function render() {
+  // Static background: empty cells and transparent holes, plus the tile layer on top.
+  function buildBoard() {
+    var html = '';
+    for (var y = 0; y < config.height; y++) {
+      for (var x = 0; x < config.width; x++) {
+        var v = state.grid[y][x];
+        html += (v === null || v === undefined) ? '<div class="hole"></div>' : '<div class="cell"></div>';
+      }
+    }
+    els.board.innerHTML = html;
+    els.board.appendChild(els.tiles);
+  }
+
+  function tileHtml(x, y, v, extra) {
+    var len = Math.min(String(v).length, 5);
+    return '<div class="tile" style="--x:' + x + ';--y:' + y + '">' +
+           '<div class="face ' + tileClass(v) + extra + '" data-len="' + len + '">' + esc(v) + '</div></div>';
+  }
+
+  // Slide animation: tiles are drawn at their pre-move cells, then moved to their
+  // destinations with a CSS transition; the final grid is drawn when it ends.
+  var slide = null;   // { timer } while a slide is running
+
+  function cancelSlide() {
+    if (slide) { clearTimeout(slide.timer); slide = null; }
+    els.tiles.classList.remove('sliding');
+  }
+
+  function render(animate) {
+    var last = state.last;
+    if (animate && last && last.moved && last.tiles && last.tiles.length) startSlide(last.tiles);
+    else renderFinal();
+  }
+
+  function startSlide(tiles) {
+    cancelSlide();   // a slide still running is cut short: its tiles are redrawn at their end cells
+    var html = '';
+    tiles.forEach(function (t) { html += tileHtml(t.from.x, t.from.y, t.value, ''); });
+    els.tiles.innerHTML = html;
+    void els.tiles.offsetWidth;   // commit the `from` positions before transitioning
+    els.tiles.classList.add('sliding');
+    var kids = els.tiles.children;
+    tiles.forEach(function (t, i) {
+      kids[i].style.setProperty('--x', t.to.x);
+      kids[i].style.setProperty('--y', t.to.y);
+    });
+    slide = { timer: setTimeout(renderFinal, SLIDE_FALLBACK_MS) };
+  }
+  els.tiles.addEventListener('transitionend', function (e) {
+    if (slide && e.target.classList.contains('tile')) renderFinal();
+  });
+
+  function renderFinal() {
+    cancelSlide();
     var grid = state.grid, last = state.last || {};
     var merged = keySet(last.merged), spawned = keySet(last.spawned);
     var html = '';
     for (var y = 0; y < config.height; y++) {
       for (var x = 0; x < config.width; x++) {
         var v = grid[y][x];
-        if (v === null || v === undefined) { html += '<div class="hole"></div>'; continue; }
-        if (!v) { html += '<div class="cell"></div>'; continue; }
+        if (!v) continue;
         var k = x + ',' + y;
-        var cls = 'tile ' + tileClass(v) + (merged[k] ? ' merged' : '') + (spawned[k] ? ' spawned' : '');
-        var len = Math.min(String(v).length, 5);
-        html += '<div class="cell"><div class="' + cls + '" data-len="' + len + '">' + esc(v) + '</div></div>';
+        html += tileHtml(x, y, v, (merged[k] ? ' merged' : '') + (spawned[k] ? ' spawned' : ''));
       }
     }
-    els.board.innerHTML = html;
+    els.tiles.innerHTML = html;
 
     if (state.score > best()) storeSet(bestKey(), state.score);
     els.score.textContent = state.score;
@@ -124,6 +180,21 @@
     els.board.style.setProperty('--gap', gap + 'px');
     els.board.style.setProperty('--cell', cell + 'px');
   }
+
+  // ---- themes ---------------------------------------------------------------
+  function applyTheme(name) {
+    if (THEMES.indexOf(name) < 0) name = THEMES[0];
+    document.body.setAttribute('data-theme', name);
+    storeSet('phils2048.theme', name);
+    els.theme.title = 'Theme: ' + name;
+    var meta = document.querySelector('meta[name="theme-color"]');
+    var bg = getComputedStyle(document.body).getPropertyValue('--bg').trim();
+    if (meta && bg) meta.setAttribute('content', bg);
+  }
+  els.theme.addEventListener('click', function () {
+    var i = THEMES.indexOf(document.body.getAttribute('data-theme'));
+    applyTheme(THEMES[(i + 1) % THEMES.length]);
+  });
 
   function showMessage(text) {
     clearTimeout(msgTimer);
@@ -205,6 +276,7 @@
   else window.addEventListener('resize', layout);
 
   // ---- boot -----------------------------------------------------------------
+  applyTheme(storeGet('phils2048.theme'));
   // Restore the last played config (preset or custom), else the first preset.
   var saved = null;
   try { saved = JSON.parse(storeGet('phils2048.lastConfig')); } catch (e) {}
