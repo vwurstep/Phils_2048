@@ -39,8 +39,9 @@
     state = Engine.newGame(config);
     wonShown = false;
     hideMessage();
-    els.board.style.setProperty('--cols', config.width);
-    els.board.style.setProperty('--rows', config.height);
+    var wrap = els.board.parentElement;
+    wrap.style.setProperty('--cols', config.width);
+    wrap.style.setProperty('--rows', config.height);
     els.config.textContent = JSON.stringify(config, function (k, v) {
       return typeof v === 'function' ? v.toString() : v;
     }, 2);

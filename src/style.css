@@ -71,13 +71,14 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
 
 /* Board: width limited by container width and by the viewport height (desktop) */
 .board-wrap {
+  --cols: 4;
+  --rows: 4;
   position: relative;
+  width: 100%;
   width: min(100%, max(200px, calc((100vh - 19rem) * var(--cols) / var(--rows))));
   width: min(100%, max(200px, calc((100dvh - 19rem) * var(--cols) / var(--rows))));
 }
 .board {
-  --cols: 4;
-  --rows: 4;
   --gap: 8px;
   --cell: 80px;
   display: grid;
@@ -190,3 +191,6 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
   -webkit-user-select: text;
   user-select: text;
 }
+
+/* The hidden attribute must win over display rules above */
+[hidden] { display: none !important; }
