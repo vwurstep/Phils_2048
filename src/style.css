@@ -137,7 +137,22 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
   background: var(--btn);
   cursor: pointer;
 }
-.controls button.icon { padding: 7px 9px; font-size: 1.05rem; line-height: 1.15; }
+.controls select {
+  font: inherit;
+  font-size: 0.9rem;
+  border: 0;
+  border-radius: 4px;
+  padding: 7px 24px 7px 10px;
+  color: var(--btn-fg);
+  background: var(--btn);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--btn-fg) 50%), linear-gradient(135deg, var(--btn-fg) 50%, transparent 50%);
+  background-position: right 12px center, right 8px center;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+}
 .controls button:disabled { opacity: 0.45; cursor: default; }
 .controls button:active, .overlay button:active, .movepad button:active { filter: brightness(0.9); }
 

@@ -209,14 +209,14 @@
     if (THEMES.indexOf(name) < 0) name = THEMES[0];
     document.body.setAttribute('data-theme', name);
     storeSet('phils2048.theme', name);
-    els.theme.title = 'Theme: ' + name;
+    els.theme.value = name;
     var meta = document.querySelector('meta[name="theme-color"]');
     var bg = getComputedStyle(document.body).getPropertyValue('--bg').trim();
     if (meta && bg) meta.setAttribute('content', bg);
   }
-  els.theme.addEventListener('click', function () {
-    var i = THEMES.indexOf(document.body.getAttribute('data-theme'));
-    applyTheme(THEMES[(i + 1) % THEMES.length]);
+  els.theme.addEventListener('change', function () {
+    applyTheme(els.theme.value);
+    els.theme.blur();
   });
 
   function showMessage(text) {
