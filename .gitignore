@@ -1,2 +1,10 @@
+# macOS
 .DS_Store
+
+# Node
 node_modules/
+
+# Claude Code working files (kept locally, not published)
+CLAUDE.md
+PLAN.md
+.claude/
