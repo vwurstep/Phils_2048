@@ -41,11 +41,31 @@
   }
 
   // ---- game -----------------------------------------------------------------
-  function startGame(preset) {
+  // Persist the running game (board + undo history) so a reload continues where we left off.
+  function snap(st) { return { grid: st.grid, score: st.score, moveCount: st.moveCount, won: st.won }; }
+  function saveGame() {
+    storeSet('phils2048.game', JSON.stringify({ name: config.name, state: snap(state), history: history.map(snap) }));
+  }
+  function restoreGame(cfg) {
+    var g = null;
+    try { g = JSON.parse(storeGet('phils2048.game')); } catch (e) {}
+    if (!g || g.name !== cfg.name || !g.state || !g.state.grid) return false;
+    var grid = g.state.grid;
+    if (grid.length !== cfg.height || grid[0].length !== cfg.width) return false;
+    var thaw = function (sn) { return Engine.fromGrid(cfg, sn.grid, { score: sn.score, moveCount: sn.moveCount, won: sn.won }); };
+    try {
+      var restored = thaw(g.state), hist = (g.history || []).map(thaw);
+      startGame(cfg, restored, hist);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  // Start a game with `preset`; `restored`/`hist` optionally continue a saved game.
+  function startGame(preset, restored, hist) {
     config = preset;
-    state = Engine.newGame(config);
-    history = [];
-    wonShown = false;
+    state = restored || Engine.newGame(config);
+    history = hist || [];
+    wonShown = !!state.won;
     hideMessage();
     // Remember the full config so a custom grid survives a reload (panel.js reads it too).
     storeSet('phils2048.lastConfig', JSON.stringify(config));
@@ -60,6 +80,7 @@
     buildBoard();
     layout();
     render(false);
+    saveGame();
   }
 
   function dispatch(dir) {
@@ -70,12 +91,14 @@
     if (history.length > MAX_UNDO) history.shift();
     state = next;
     render(true);
+    saveGame();
   }
 
   function undo() {
     if (!history.length) return;
     state = history.pop();
     render(false);
+    saveGame();
   }
 
   // ---- rendering ------------------------------------------------------------
@@ -280,5 +303,6 @@
   // Restore the last played config (preset or custom), else the first preset.
   var saved = null;
   try { saved = JSON.parse(storeGet('phils2048.lastConfig')); } catch (e) {}
-  startGame(saved && saved.width && saved.height && saved.moves ? saved : Presets[0]);
+  var cfg = saved && saved.width && saved.height && saved.moves ? saved : Presets[0];
+  if (!restoreGame(cfg)) startGame(cfg);
 })();

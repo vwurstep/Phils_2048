@@ -45,7 +45,13 @@ Options, in order of preference:
 
 ## Phase 3: more knobs
 
-Done: undo (last 10 moves, Backspace key). On-screen move buttons exist in the code but are hidden.
+Done so far:
+- Undo (last 10 moves, Backspace key). On-screen move buttons exist in the code but are hidden.
+- Fast slide animation (80 ms) driven by `state.last.tiles` from the engine.
+- Four colour themes (classic, dark, ocean, mono), cycled by the header button, all colours are CSS variables.
+- "New game" panel: preset cards with shape thumbnails, plus a custom 8x8 paint editor
+  (`EDITOR_SIZE` in src/panel.js) that crops to the bounding box, with a 4/8-direction choice.
+- The running game (board, score, undo history) is saved in localStorage and restored on reload.
 
 Ideas parked for later: seed sharing, spawn rules that depend on board state,
 merge rules other than doubling, timed mode, statistics of games played.
