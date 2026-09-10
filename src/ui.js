@@ -12,7 +12,7 @@
                q: 'upleft', e: 'upright', z: 'downleft', y: 'downleft', c: 'downright' };  // y: Swiss keyboards swap Y and Z
   var PALETTE_RANKS = 10;   // .t1 .. .t10 (2 .. 1024); above that: dark
   var THEMES = ['classic', 'dark', 'ocean', 'mono'];
-  var SLIDE_FALLBACK_MS = 100;  // slide is 80 ms in CSS; finish anyway if transitionend never fires
+  var SLIDE_FALLBACK_MS = 120;  // slide is 80 ms in CSS; finish anyway if transitionend never fires
   var MIN_SWIPE = 20;       // px
   var MIN_COS = 0.5;        // ignore swipes not close to any allowed direction
 
@@ -124,60 +124,119 @@
     els.board.appendChild(els.tiles);
   }
 
-  function tileHtml(x, y, v, extra) {
+  // ---- tile layer -----------------------------------------------------------
+  // Tile nodes persist across moves: a move only changes a node's --x/--y and the
+  // CSS transition on transform slides it (rebuilding the layer per move made Safari
+  // skip transitions and jump). `ids[y][x]` is the id of the node shown at that cell
+  // of the last settled grid; `nodes` maps id -> element. The engine has no tile ids,
+  // so `last.tiles` ({from, to, value} per pre-move tile) is joined against `ids`.
+  var nodes = {}, ids = [], nextId = 1;
+  var pending = null;   // { timer, finish(animate) } while a slide is in flight
+
+  function faceHtml(v, extra) {
     var len = Math.min(String(v).length, 5);
-    return '<div class="tile" style="--x:' + x + ';--y:' + y + '">' +
-           '<div class="face ' + tileClass(v) + extra + '" data-len="' + len + '">' + esc(v) + '</div></div>';
+    return '<div class="face ' + tileClass(v) + (extra || '') + '" data-len="' + len + '">' + esc(v) + '</div>';
   }
 
-  // Slide animation: tiles are drawn at their pre-move cells, then moved to their
-  // destinations with a CSS transition; the final grid is drawn when it ends.
-  var slide = null;   // { timer } while a slide is running
+  function emptyIds() {
+    var a = [];
+    for (var y = 0; y < config.height; y++) a.push(new Array(config.width));
+    return a;
+  }
 
-  function cancelSlide() {
-    if (slide) { clearTimeout(slide.timer); slide = null; }
-    els.tiles.classList.remove('sliding');
+  function makeTile(x, y, v, extra) {
+    var el = document.createElement('div');
+    el.className = 'tile';
+    el.style.setProperty('--x', x);
+    el.style.setProperty('--y', y);
+    el.innerHTML = faceHtml(v, extra);
+    var id = nextId++;
+    nodes[id] = el;
+    els.tiles.appendChild(el);
+    return id;
+  }
+
+  function removeTile(id) {
+    var el = nodes[id];
+    if (el) el.parentNode.removeChild(el);
+    delete nodes[id];
   }
 
   function render(animate) {
     var last = state.last;
-    if (animate && last && last.moved && last.tiles && last.tiles.length) startSlide(last.tiles);
-    else renderFinal();
+    if (animate && last && last.moved && last.tiles && last.tiles.length && startSlide(last)) return;
+    renderFinal();
   }
 
-  function startSlide(tiles) {
-    cancelSlide();   // a slide still running is cut short: its tiles are redrawn at their end cells
-    var html = '';
-    tiles.forEach(function (t) { html += tileHtml(t.from.x, t.from.y, t.value, ''); });
-    els.tiles.innerHTML = html;
-    void els.tiles.offsetWidth;   // commit the `from` positions before transitioning
+  // Slide the existing nodes to their destinations; merges and spawns are applied
+  // when the transition ends (or the fallback timer fires). Returns false if the
+  // layer is out of sync with the grid, in which case the caller rebuilds it.
+  function startSlide(last) {
+    if (pending) pending.finish(false);   // a slide still in flight settles instantly first
+    var grid = state.grid, spawned = last.spawned || [];
+    var newIds = emptyIds(), dest = {}, moving = [];
+    for (var i = 0; i < last.tiles.length; i++) {
+      var t = last.tiles[i], id = ids[t.from.y] && ids[t.from.y][t.from.x];
+      if (!id || !nodes[id]) return false;
+      var k = t.to.x + ',' + t.to.y;
+      (dest[k] || (dest[k] = [])).push(id);
+      if (t.from.x !== t.to.x || t.from.y !== t.to.y) moving.push({ id: id, to: t.to });
+    }
+    // Commit the current positions (including anything settled just above) before
+    // changing them, so the transition starts from where the tiles are.
+    void els.tiles.offsetWidth;
     els.tiles.classList.add('sliding');
-    var kids = els.tiles.children;
-    tiles.forEach(function (t, i) {
-      kids[i].style.setProperty('--x', t.to.x);
-      kids[i].style.setProperty('--y', t.to.y);
+    moving.forEach(function (m) {
+      nodes[m.id].style.setProperty('--x', m.to.x);
+      nodes[m.id].style.setProperty('--y', m.to.y);
     });
-    slide = { timer: setTimeout(renderFinal, SLIDE_FALLBACK_MS) };
+
+    function finish(animate) {
+      if (!pending) return;
+      clearTimeout(pending.timer);
+      pending = null;
+      els.tiles.classList.remove('sliding');   // snaps any unfinished transition to its end
+      Object.keys(dest).forEach(function (k) {
+        var list = dest[k], xy = k.split(','), x = +xy[0], y = +xy[1];
+        for (var j = 1; j < list.length; j++) removeTile(list[j]);   // merge partner
+        if (list.length > 1) nodes[list[0]].innerHTML = faceHtml(grid[y][x], animate ? ' merged' : '');
+        newIds[y][x] = list[0];
+      });
+      spawned.forEach(function (c) {
+        newIds[c.y][c.x] = makeTile(c.x, c.y, grid[c.y][c.x], animate ? ' spawned' : '');
+      });
+      ids = newIds;
+      updateHud();
+    }
+    pending = { finish: finish, timer: setTimeout(function () { finish(true); }, SLIDE_FALLBACK_MS) };
+    if (!moving.length) finish(true);
+    return true;
   }
   els.tiles.addEventListener('transitionend', function (e) {
-    if (slide && e.target.classList.contains('tile')) renderFinal();
+    if (pending && e.propertyName === 'transform' && e.target.classList.contains('tile')) pending.finish(true);
   });
 
+  // Instant rebuild of the whole layer from state.grid (new game, undo, restore, re-layout).
   function renderFinal() {
-    cancelSlide();
+    if (pending) { clearTimeout(pending.timer); pending = null; }
+    els.tiles.classList.remove('sliding');
+    els.tiles.innerHTML = '';
+    nodes = {};
+    ids = emptyIds();
     var grid = state.grid, last = state.last || {};
     var merged = keySet(last.merged), spawned = keySet(last.spawned);
-    var html = '';
     for (var y = 0; y < config.height; y++) {
       for (var x = 0; x < config.width; x++) {
         var v = grid[y][x];
         if (!v) continue;
         var k = x + ',' + y;
-        html += tileHtml(x, y, v, (merged[k] ? ' merged' : '') + (spawned[k] ? ' spawned' : ''));
+        ids[y][x] = makeTile(x, y, v, (merged[k] ? ' merged' : '') + (spawned[k] ? ' spawned' : ''));
       }
     }
-    els.tiles.innerHTML = html;
+    updateHud();
+  }
 
+  function updateHud() {
     if (state.score > best()) storeSet(bestKey(), state.score);
     els.score.textContent = state.score;
     els.best.textContent = best();
@@ -291,6 +350,7 @@
   // Public API used by panel.js.
   window.startGame = startGame;
   window.currentConfig = function () { return config; };
+  window.__state = function () { return state; };   // debug hook for automated browser tests only
 
   // Re-measure after the first paint and after fonts/window settle: some browsers
   // (seen in Safari) report a different board width a moment after the script ran.
