@@ -339,6 +339,28 @@ h1 { margin: 0; font-size: 1.7rem; font-weight: 800; }
 .card:active { filter: brightness(0.95); }
 .card.active { border-color: var(--btn); }
 .card-name { font-size: 0.9rem; font-weight: 700; text-align: center; }
+.card:focus-visible { outline: 2px solid var(--btn); outline-offset: 2px; }
+.panel-section { margin: 0; font-size: 0.95rem; font-weight: 700; }
+/* Saved custom grid cards: same look as presets plus a small delete control in the corner */
+.card-saved { position: relative; }
+.card-del {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--fg);
+  opacity: 0.6;
+  font: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.card-del:hover, .card-del:active { opacity: 1; background: var(--board); }
 
 /* Move-rule toggle at the top of the panel (applies to presets and custom grids) */
 .moves-row { display: flex; align-items: center; gap: 10px; }

@@ -8,6 +8,9 @@ var Panel = (function () {
 
   var EDITOR_SIZE = 8;            // editor is EDITOR_SIZE x EDITOR_SIZE cells
   var CUSTOM_KEY = 'phils2048.custom';
+  var CUSTOMS_KEY = 'phils2048.customs';        // JSON array of played custom grids (base configs)
+  var COUNTER_KEY = 'phils2048.customCounter';  // running number for unique custom names
+  var BEST_PREFIX = 'phils2048.best.';
   var MOVES_KEY = 'phils2048.moves';   // 'normal' | 'diagonal'
   var DIAG_SUFFIX = ' + diagonal';
   var MIN_CELLS = 2;
@@ -17,6 +20,7 @@ var Panel = (function () {
 
   function storeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function storeSet(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} }
+  function storeDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
   function esc(s) {
     return String(s).replace(/[&<>"]/g, function (c) {
@@ -26,6 +30,7 @@ var Panel = (function () {
 
   // ---- state ---------------------------------------------------------------
   var cells = [];                 // cells[y][x] boolean
+  var customs = [];               // saved custom grids, newest first (see CUSTOMS_KEY)
   var moveRule = 'normal';        // 'normal' | 'diagonal'; applies to presets and custom grids
   var paint = null;               // { id, value } while dragging over the editor
   var els = {};
@@ -100,8 +105,9 @@ var Panel = (function () {
     return n;
   }
 
-  // Crop the selection to its bounding box and build a config like a preset.
-  function buildCustomConfig() {
+  // Crop the selection to its bounding box and build a base config like a preset
+  // (standard moves, no name yet; registerCustom() names it, withMoveRule() applies the toggle).
+  function buildCustomBase() {
     var minX = EDITOR_SIZE, minY = EDITOR_SIZE, maxX = -1, maxY = -1;
     for (var y = 0; y < EDITOR_SIZE; y++) for (var x = 0; x < EDITOR_SIZE; x++) {
       if (!cells[y][x]) continue;
@@ -118,15 +124,68 @@ var Panel = (function () {
       }
       mask.push(row);
     }
-    return withMoveRule({
-      name: 'Custom ' + width + 'x' + height,
+    return {
+      name: '',
       width: width,
       height: height,
       mask: holes ? mask : null,
       moves: Presets.standardMoves(),
       spawn: clone(BASE.spawn),
       merge: clone(BASE.merge)
-    });
+    };
+  }
+
+  // ---- saved custom grids --------------------------------------------------
+  function loadCustoms() {
+    customs = [];
+    var saved = null;
+    try { saved = JSON.parse(storeGet(CUSTOMS_KEY)); } catch (e) {}
+    if (Array.isArray(saved)) {
+      customs = saved.filter(function (c) { return c && c.name && c.width && c.height; });
+    }
+  }
+
+  function saveCustoms() { storeSet(CUSTOMS_KEY, JSON.stringify(customs)); }
+
+  function sameShape(a, b) {
+    return a.width === b.width && a.height === b.height &&
+           JSON.stringify(a.mask || null) === JSON.stringify(b.mask || null);
+  }
+
+  // Return the saved entry for this shape, creating a uniquely named one if needed.
+  function registerCustom(base) {
+    for (var i = 0; i < customs.length; i++) if (sameShape(customs[i], base)) return customs[i];
+    var n = (parseInt(storeGet(COUNTER_KEY), 10) || 0) + 1;
+    storeSet(COUNTER_KEY, n);
+    var entry = clone(base);
+    entry.name = 'Custom ' + n + ' (' + base.width + 'x' + base.height + ')';
+    customs.unshift(entry);
+    saveCustoms();
+    return entry;
+  }
+
+  function deleteCustom(i) {
+    var entry = customs[i];
+    if (!entry) return;
+    customs.splice(i, 1);
+    saveCustoms();
+    storeDel(BEST_PREFIX + entry.name);
+    storeDel(BEST_PREFIX + entry.name + DIAG_SUFFIX);
+    renderCustoms();
+  }
+
+  // Put a saved shape into the editor: centred if it fits, else top-left (cropped).
+  function selectShape(cfg) {
+    cells = emptyCells();
+    var ox = cfg.width <= EDITOR_SIZE ? Math.floor((EDITOR_SIZE - cfg.width) / 2) : 0;
+    var oy = cfg.height <= EDITOR_SIZE ? Math.floor((EDITOR_SIZE - cfg.height) / 2) : 0;
+    for (var y = 0; y < cfg.height && oy + y < EDITOR_SIZE; y++) {
+      for (var x = 0; x < cfg.width && ox + x < EDITOR_SIZE; x++) {
+        cells[oy + y][ox + x] = !cfg.mask || cfg.mask[y][x] === '#';
+      }
+    }
+    saveCustom();
+    if (els.grid) renderEditor();
   }
 
   // ---- markup --------------------------------------------------------------
@@ -157,9 +216,9 @@ var Panel = (function () {
       html += '<button type="button" class="card" data-preset="' + i + '">' + thumb(p) +
               '<span class="card-name">' + esc(p.name) + '</span></button>';
     });
-    html += '<button type="button" class="card card-custom" id="panel-custom-toggle">' +
-            '<span class="thumb custom-icon">&#9998;</span><span class="card-name">Custom</span></button>' +
-            '</div>' +
+    html += '</div>' +
+      '<h3 class="panel-section" id="panel-customs-head" hidden>Your grids</h3>' +
+      '<div class="cards" id="panel-customs"></div>' +
       '<div class="editor" id="panel-editor" hidden>' +
         '<p class="editor-hint">Tap or drag to select cells. Empty rows and columns around the selection are trimmed.</p>' +
         '<div class="editor-grid" id="panel-grid" style="grid-template-columns:repeat(' + EDITOR_SIZE + ',1fr)"></div>' +
@@ -176,7 +235,9 @@ var Panel = (function () {
     els.root = root;
     els.box = root.querySelector('.panel-box');
     els.editor = root.querySelector('#panel-editor');
-    els.toggle = root.querySelector('#panel-custom-toggle');
+    els.customsHead = root.querySelector('#panel-customs-head');
+    els.customs = root.querySelector('#panel-customs');
+    renderCustoms();
     els.grid = root.querySelector('#panel-grid');
     els.start = root.querySelector('#panel-start');
     els.moves = root.querySelector('#panel-moves');
@@ -196,10 +257,21 @@ var Panel = (function () {
       var card = e.target.closest('.card[data-preset]');
       if (card) { window.startGame(withMoveRule(Presets[card.getAttribute('data-preset')])); close(); }
     });
-    els.toggle.addEventListener('click', function () {
-      els.editor.hidden = !els.editor.hidden;
-      els.toggle.classList.toggle('active', !els.editor.hidden);
-      if (!els.editor.hidden) els.editor.scrollIntoView({ block: 'nearest' });
+    // Saved custom cards are re-rendered, so delegate from their container.
+    els.customs.addEventListener('click', function (e) {
+      var del = e.target.closest('.card-del');
+      if (del) {
+        e.stopPropagation();
+        if (window.confirm('Delete this grid and its best score?')) deleteCustom(+del.getAttribute('data-custom'));
+        return;
+      }
+      if (e.target.closest('#panel-custom-toggle')) { toggleEditor(); return; }
+      var card = e.target.closest('.card[data-custom]');
+      if (card) startCustom(+card.getAttribute('data-custom'));
+    });
+    els.customs.addEventListener('keydown', function (e) {
+      var card = e.target.closest('.card[data-custom]');
+      if (card && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); startCustom(+card.getAttribute('data-custom')); }
     });
 
     root.querySelector('#panel-clear').addEventListener('click', function () { cells = emptyCells(); renderEditor(); });
@@ -209,10 +281,10 @@ var Panel = (function () {
       if (b) setMoveRule(b.getAttribute('data-rule'));
     });
     els.start.addEventListener('click', function () {
-      var cfg = buildCustomConfig();
-      if (!cfg || countSelected() < MIN_CELLS) return;
+      var base = buildCustomBase();
+      if (!base || countSelected() < MIN_CELLS) return;
       saveCustom();
-      window.startGame(cfg);
+      window.startGame(withMoveRule(registerCustom(base)));
       close();
     });
 
@@ -232,6 +304,39 @@ var Panel = (function () {
     function endPaint(e) { if (paint && e.pointerId === paint.id) { paint = null; saveCustom(); } }
     window.addEventListener('pointerup', endPaint);
     window.addEventListener('pointercancel', endPaint);
+  }
+
+  function toggleEditor(show) {
+    if (show === undefined) show = els.editor.hidden;
+    els.editor.hidden = !show;
+    els.toggle.classList.toggle('active', show);
+    if (show) els.editor.scrollIntoView({ block: 'nearest' });
+  }
+
+  // Start a saved custom grid and pre-fill the editor with its shape for tweaking.
+  function startCustom(i) {
+    var entry = customs[i];
+    if (!entry) return;
+    selectShape(entry);
+    window.startGame(withMoveRule(entry));
+    close();
+  }
+
+  // "Your grids": saved custom cards (newest first) followed by the Custom editor card.
+  function renderCustoms() {
+    var html = '';
+    customs.forEach(function (c, i) {
+      html += '<div class="card card-saved" role="button" tabindex="0" data-custom="' + i + '">' + thumb(c) +
+              '<span class="card-name">' + esc(c.name) + '</span>' +
+              '<button type="button" class="card-del" data-custom="' + i + '" aria-label="Delete ' + esc(c.name) + '">&times;</button></div>';
+    });
+    html += '<button type="button" class="card card-custom" id="panel-custom-toggle">' +
+            '<span class="thumb custom-icon">&#9998;</span><span class="card-name">Custom</span></button>';
+    var wasActive = !!(els.toggle && els.toggle.classList.contains('active'));
+    els.customs.innerHTML = html;
+    els.customsHead.hidden = customs.length === 0;
+    els.toggle = els.customs.querySelector('#panel-custom-toggle');
+    els.toggle.classList.toggle('active', wasActive);
   }
 
   function cellAt(e) {
@@ -265,11 +370,15 @@ var Panel = (function () {
     renderMoveRule();
     loadCustom();
     renderEditor();
-    // Open straight into the editor when a custom game is running.
+    loadCustoms();
+    renderCustoms();
+    // Open straight into the editor when a saved custom grid is running
+    // (legacy "Custom WxH" names are ignored).
     var cur = window.currentConfig && window.currentConfig();
-    var custom = !!(cur && /^Custom /.test(cur.name));
-    els.editor.hidden = !custom;
-    els.toggle.classList.toggle('active', custom);
+    var custom = !!cur && customs.some(function (c) {
+      return cur.name === c.name || cur.name === c.name + DIAG_SUFFIX;
+    });
+    toggleEditor(custom);
     els.root.hidden = false;
     els.box.scrollTop = 0;
   }
