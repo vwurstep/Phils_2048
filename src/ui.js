@@ -15,7 +15,7 @@
   var MIN_COS = 0.5;        // ignore swipes not close to any allowed direction
 
   function $(id) { return document.getElementById(id); }
-  var els = { board: $('board'), score: $('score'), best: $('best'), preset: $('preset'),
+  var els = { board: $('board'), score: $('score'), best: $('best'), configname: $('configname'),
               newgame: $('newgame'), undo: $('undo'), overlay: $('overlay'), retry: $('retry'),
               message: $('message'), movepad: $('movepad'), config: $('config') };
 
@@ -42,6 +42,9 @@
     history = [];
     wonShown = false;
     hideMessage();
+    // Remember the full config so a custom grid survives a reload (panel.js reads it too).
+    storeSet('phils2048.lastConfig', JSON.stringify(config));
+    els.configname.textContent = config.name;
     var wrap = els.board.parentElement;
     wrap.style.setProperty('--cols', config.width);
     wrap.style.setProperty('--rows', config.height);
@@ -144,7 +147,7 @@
   // ---- input ----------------------------------------------------------------
   document.addEventListener('keydown', function (e) {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (e.target && e.target.tagName === 'SELECT') return;
+    if (window.Panel && Panel.isOpen && Panel.isOpen()) return;   // panel owns the keys
     if (e.key === 'Backspace') { e.preventDefault(); undo(); return; }
     var dir = KEYS[e.key] || KEYS[String(e.key).toLowerCase()];
     if (dir && config && config.moves[dir]) { e.preventDefault(); dispatch(dir); }
@@ -188,28 +191,22 @@
     if (b) dispatch(b.getAttribute('data-dir'));
   });
   els.undo.addEventListener('click', undo);
-  els.newgame.addEventListener('click', function () { startGame(config); });
+  // "New game" opens the picker panel (panel.js); "Try again" restarts the same config.
+  els.newgame.addEventListener('click', function () {
+    if (window.Panel) Panel.open(); else startGame(config);
+  });
   els.retry.addEventListener('click', function () { startGame(config); });
 
-  els.preset.addEventListener('change', function () {
-    var p = Presets[els.preset.value];
-    storeSet('phils2048.preset', p.name);
-    els.preset.blur();
-    startGame(p);
-  });
+  // Public API used by panel.js.
+  window.startGame = startGame;
+  window.currentConfig = function () { return config; };
 
   if (window.ResizeObserver) new ResizeObserver(layout).observe(els.board);
   else window.addEventListener('resize', layout);
 
   // ---- boot -----------------------------------------------------------------
-  Presets.forEach(function (p, i) {
-    var o = document.createElement('option');
-    o.value = i;
-    o.textContent = p.name;
-    els.preset.appendChild(o);
-  });
-  var savedName = storeGet('phils2048.preset');
-  var idx = Presets.findIndex(function (p) { return p.name === savedName; });
-  els.preset.value = idx >= 0 ? idx : 0;
-  startGame(Presets[els.preset.value]);
+  // Restore the last played config (preset or custom), else the first preset.
+  var saved = null;
+  try { saved = JSON.parse(storeGet('phils2048.lastConfig')); } catch (e) {}
+  startGame(saved && saved.width && saved.height && saved.moves ? saved : Presets[0]);
 })();

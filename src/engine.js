@@ -95,45 +95,60 @@ var Engine = (function () {
   /**
    * Slide a 1-D line of values toward index 0 (0 = empty).
    * Rule 'equal-double': adjacent equal tiles merge into their sum, each tile
-   * merges at most once per move. Returns { values, gained, mergedIdx }.
+   * merges at most once per move. Returns { values, gained, mergedIdx, dest }.
+   * `dest` maps each input index that held a tile to its output index (sparse
+   * array: indices of empty inputs are left undefined). Two merging tiles map
+   * to the same output index.
    * `mergeRule` may be the config.merge object, a rule string, or undefined.
    */
   function slideLine(values, mergeRule) {
     var rule = (mergeRule && mergeRule.rule) || mergeRule || 'equal-double';
     if (rule !== 'equal-double') throw new Error('unknown merge rule: ' + rule);
 
-    var tiles = values.filter(function (v) { return v !== 0; });
-    var out = [], gained = 0, mergedIdx = [];
+    var tiles = [], srcIdx = [];
+    values.forEach(function (v, i) { if (v !== 0) { tiles.push(v); srcIdx.push(i); } });
+    var out = [], gained = 0, mergedIdx = [], dest = [];
     for (var i = 0; i < tiles.length; i++) {
       if (i + 1 < tiles.length && tiles[i] === tiles[i + 1]) {
         var sum = tiles[i] + tiles[i + 1];
         out.push(sum);
         gained += sum;
         mergedIdx.push(out.length - 1);
+        dest[srcIdx[i]] = out.length - 1;
+        dest[srcIdx[i + 1]] = out.length - 1;
         i++; // skip the partner: it has merged and cannot merge again
       } else {
         out.push(tiles[i]);
+        dest[srcIdx[i]] = out.length - 1;
       }
     }
     while (out.length < values.length) out.push(0);
-    return { values: out, gained: gained, mergedIdx: mergedIdx };
+    return { values: out, gained: gained, mergedIdx: mergedIdx, dest: dest };
   }
 
-  /** Apply a slide to a copy of the grid. Returns { grid, moved, gained, merged }. */
+  /**
+   * Apply a slide to a copy of the grid. Returns { grid, moved, gained, merged, tiles }.
+   * `tiles` has one entry { from, to, value } per tile on the board before the
+   * move (value = pre-move value, to = destination cell; merging tiles share `to`).
+   */
   function slideGrid(config, grid, dirName) {
     var next = grid.map(function (row) { return row.slice(); });
-    var moved = false, gained = 0, merged = [];
+    var moved = false, gained = 0, merged = [], tiles = [];
     lines(config, dirName).forEach(function (line) {
       var before = line.map(function (c) { return grid[c.y][c.x]; });
       var res = slideLine(before, config.merge);
       for (var i = 0; i < line.length; i++) {
         if (res.values[i] !== before[i]) moved = true;
         next[line[i].y][line[i].x] = res.values[i];
+        if (before[i] !== 0) {
+          var d = line[res.dest[i]];
+          tiles.push({ from: { x: line[i].x, y: line[i].y }, to: { x: d.x, y: d.y }, value: before[i] });
+        }
       }
       gained += res.gained;
       res.mergedIdx.forEach(function (i) { merged.push({ x: line[i].x, y: line[i].y }); });
     });
-    return { grid: next, moved: moved, gained: gained, merged: merged };
+    return { grid: next, moved: moved, gained: gained, merged: merged, tiles: tiles };
   }
 
   // ------------------------------------------------------------- queries ----
@@ -190,7 +205,7 @@ var Engine = (function () {
   // ---------------------------------------------------------------- state ---
 
   function emptyLast() {
-    return { dir: null, moved: false, merged: [], spawned: [] };
+    return { dir: null, moved: false, merged: [], spawned: [], tiles: [] };
   }
 
   function buildState(config, grid, score, moveCount, won, last) {
@@ -238,12 +253,12 @@ var Engine = (function () {
       return {
         config: config, grid: state.grid, score: state.score, moveCount: state.moveCount,
         over: state.over, won: state.won,
-        last: { dir: dirName, moved: false, merged: [], spawned: [] }
+        last: { dir: dirName, moved: false, merged: [], spawned: [], tiles: [] }
       };
     }
 
     var spawned = spawnTiles(config, res.grid, config.spawn.count, rng);
-    var last = { dir: dirName, moved: true, merged: res.merged, spawned: spawned };
+    var last = { dir: dirName, moved: true, merged: res.merged, spawned: spawned, tiles: res.tiles };
     return buildState(config, res.grid, state.score + res.gained, state.moveCount + 1, state.won, last);
   }
 

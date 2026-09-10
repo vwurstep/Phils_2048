@@ -81,6 +81,17 @@ test('slideLine leaves unchanged line alone', function () {
   assert.deepStrictEqual(r.mergedIdx, []);
 });
 
+test('slideLine dest maps input indices to output indices', function () {
+  var r = Engine.slideLine([2, 0, 2, 4]);
+  assert.strictEqual(r.dest[0], 0);
+  assert.strictEqual(r.dest[1], undefined, 'empty input has no dest');
+  assert.strictEqual(r.dest[2], 0, 'merge partner shares the merge cell');
+  assert.strictEqual(r.dest[3], 1);
+  var u = Engine.slideLine([2, 4, 0, 0]);
+  assert.strictEqual(u.dest[0], 0);
+  assert.strictEqual(u.dest[1], 1);
+});
+
 test('slideLine rejects unknown merge rule', function () {
   assert.throws(function () { Engine.slideLine([2, 2], { rule: 'nope' }); });
 });
@@ -274,6 +285,76 @@ test('move() scores merges and reports merged cells', function () {
 test('move() throws on unknown direction', function () {
   var s = Engine.newGame(classic, mulberry32(1));
   assert.throws(function () { Engine.move(s, 'upleft'); });
+});
+
+// --- last.tiles (animation data) ------------------------------------------
+
+function tileKey(t) { return t.from.x + ',' + t.from.y + '->' + t.to.x + ',' + t.to.y + ':' + t.value; }
+
+test('last.tiles: row [2,0,2,4] moving left reports from/to/value per tile', function () {
+  var s = Engine.fromGrid(classic, [
+    [2, 0, 2, 4],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0]
+  ]);
+  var n = Engine.move(s, 'left', mulberry32(21));
+  assert.strictEqual(n.last.tiles.length, 3, 'one entry per pre-move tile');
+  assert.deepStrictEqual(n.last.tiles.map(tileKey).sort(),
+    ['0,0->0,0:2', '2,0->0,0:2', '3,0->1,0:4']);
+});
+
+test('last.tiles: a tile that does not move has from === to; count equals tiles before move', function () {
+  var s = Engine.fromGrid(classic, [
+    [2, 0, 0, 0],
+    [0, 0, 4, 0],
+    [0, 0, 0, 0],
+    [8, 0, 0, 16]
+  ]);
+  var n = Engine.move(s, 'left', mulberry32(22));
+  assert.strictEqual(n.last.tiles.length, countTiles(s.grid));
+  var t21 = n.last.tiles.filter(function (t) { return t.from.x === 2 && t.from.y === 1; })[0];
+  assert.deepStrictEqual(t21.to, { x: 0, y: 1 }, '(2,1) slides to (0,1)');
+  assert.strictEqual(t21.value, 4);
+  var t00 = n.last.tiles.filter(function (t) { return t.from.x === 0 && t.from.y === 0; })[0];
+  assert.deepStrictEqual(t00.to, t00.from);
+  assert.strictEqual(t00.value, 2);
+  var t03 = n.last.tiles.filter(function (t) { return t.from.x === 0 && t.from.y === 3; })[0];
+  assert.deepStrictEqual(t03.to, { x: 0, y: 3 });
+  var t33 = n.last.tiles.filter(function (t) { return t.from.x === 3 && t.from.y === 3; })[0];
+  assert.deepStrictEqual(t33.to, { x: 1, y: 3 });
+  assert.strictEqual(t33.value, 16);
+  // spawned tiles are not in the list
+  n.last.spawned.forEach(function (sp) {
+    assert(!n.last.tiles.some(function (t) { return t.from.x === sp.x && t.from.y === sp.y; }));
+  });
+});
+
+test('last.tiles is [] on a no-op move and in newGame', function () {
+  var s = Engine.fromGrid(classic, [
+    [2, 4, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0]
+  ]);
+  var n = Engine.move(s, 'left', mulberry32(23));
+  assert.strictEqual(n.last.moved, false);
+  assert.deepStrictEqual(n.last.tiles, []);
+  assert.deepStrictEqual(Engine.newGame(classic, mulberry32(24)).last.tiles, []);
+  assert.deepStrictEqual(s.last.tiles, [], 'fromGrid too');
+});
+
+test('last.tiles: diagonal move reports the right destination', function () {
+  var s = Engine.fromGrid(diag, [
+    [0, 0, 0, 0],
+    [0, 2, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 2]
+  ]);
+  var n = Engine.move(s, 'downright', mulberry32(25));
+  assert.strictEqual(n.grid[3][3], 4);
+  assert.deepStrictEqual(n.last.tiles.map(tileKey).sort(),
+    ['1,1->3,3:2', '3,3->3,3:2']);
 });
 
 // --- over / won -----------------------------------------------------------
